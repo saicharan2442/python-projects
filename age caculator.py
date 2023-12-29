@@ -1,0 +1,10 @@
+y=int(input("enter year:"))
+def ageCalculator(y, m, d):
+    import datetime
+    today = datetime.datetime.now().date()
+    dob = datetime.date(y, m, d)
+    age = int((today-dob).days / 365.25)
+    print(age)
+ageCalculator(y,1,1)
+
+
