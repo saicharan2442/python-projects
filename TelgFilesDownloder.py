@@ -4,8 +4,8 @@ import sys
 from telethon import TelegramClient
 from telethon.tl.types import MessageMediaDocument
 # ---------------- CONFIG ----------------
-api_id = 38615406          # <-- your api_id
-api_hash = "b7fbc1d82a0fb6945c69f3f3c375bea1"      # <-- your api_hash
+api_id = 12345678          # <-- your api_id
+api_hash = "b7fbc1****************c375bea1"      # <-- your api_hash
 
 channel_username = input("Enter the channel username (without @): ")
 start_id = int(input("Enter the starting message ID: "))
@@ -66,4 +66,5 @@ async def main():
     print("\n🎉 Finished all downloads")
 
 if __name__ == "__main__":
+
     asyncio.run(main())
