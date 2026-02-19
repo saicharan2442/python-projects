@@ -1,3 +1,46 @@
+# pip install telethon cryptg
+'''
+# =========================================================
+# Developer Reference
+# =========================================================
+# This script uses the Telegram official API via Telethon.
+#
+# Required Credentials:
+# ---------------------
+# api_id and api_hash are required to authenticate a user
+# session with Telegram.
+#
+# How to get api_id & api_hash:
+# -----------------------------
+# 1. Open https://my.telegram.org
+# 2. Login using your Telegram phone number
+# 3. Go to "API development tools"
+# 4. Create a new application (one-time):
+#    - App title  : any name
+#    - Short name : lowercase + numbers only
+#    - Platform   : Desktop
+# 5. Copy the generated:
+#    - api_id
+#    - api_hash
+#
+# Features Used in This Script:
+# -----------------------------
+# - Telethon user session (not a bot)
+# - Public channel access
+# - Message ID–based file fetching
+# - Document media download (PDF, EPUB, ZIP, etc.)
+# - Progress callback for download status
+# - Fault-tolerant looping (skips missing IDs)
+#
+# Notes for Other Developers:
+# ---------------------------
+# - Works only for PUBLIC Telegram channels
+# - First run requires OTP login (saved as session file)
+# - Do not hardcode credentials in shared repositories
+# - Respect Telegram ToS and rate limits
+# =========================================================
+'''
+
 import os
 import asyncio
 import sys
@@ -5,7 +48,7 @@ from telethon import TelegramClient
 from telethon.tl.types import MessageMediaDocument
 # ---------------- CONFIG ----------------
 api_id = 12345678          # <-- your api_id
-api_hash = "b7fbc1****************c375bea1"      # <-- your api_hash
+api_hash = "b7fbc**********************bea1"      # <-- your api_hash
 
 channel_username = input("Enter the channel username (without @): ")
 start_id = int(input("Enter the starting message ID: "))
@@ -66,5 +109,4 @@ async def main():
     print("\n🎉 Finished all downloads")
 
 if __name__ == "__main__":
-
     asyncio.run(main())
