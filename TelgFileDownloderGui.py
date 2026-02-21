@@ -10,8 +10,8 @@ import subprocess
 import sys
 
 # -------- CONFIG --------
-api_id = 38615406
-api_hash = "b7fbc1d82a0fb6945c69f3f3c375bea1"
+api_id = 38****06
+api_hash = "b7fbc1d82a0f***********3c375bea1"
 MAX_RESULTS = 300
 BASE_DOWNLOAD_DIR = "downloads"
 # ------------------------
@@ -394,5 +394,6 @@ status_label = tk.Label(card,
                         fg="#00e5ff",
                         font=("Segoe UI", 10, "bold"))
 status_label.pack(pady=5)
+
 
 root.mainloop()
