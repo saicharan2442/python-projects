@@ -10,9 +10,9 @@ import subprocess
 import sys
 
 # -------- CONFIG --------
-api_id = 38****06
-api_hash = "b7fbc1d82a0f***********3c375bea1"
-MAX_RESULTS = 300
+api_id = 38615406
+api_hash = "b7fbc1d82a0fb6945c69f3f3c375bea1"
+MAX_RESULTS = 10000
 BASE_DOWNLOAD_DIR = "downloads"
 # ------------------------
 
@@ -166,11 +166,20 @@ async def search_files(channel_username, keyword):
 
     def clear_ui():
         results_listbox.delete(0, tk.END)
+        files_count_label.config(text="📦 Total Files: 0")
+
     root.after(0, clear_ui)
 
     await ensure_login()
 
-    async for message in client.iter_messages(channel_username, search=keyword):
+    fetch_all = keyword.strip().lower() == "all"
+
+    if fetch_all:
+        message_iterator = client.iter_messages(channel_username)
+    else:
+        message_iterator = client.iter_messages(channel_username, search=keyword)
+
+    async for message in message_iterator:
         if len(results) >= MAX_RESULTS:
             break
 
@@ -190,11 +199,16 @@ async def search_files(channel_username, keyword):
                 tk.END,
                 f"{len(results)}. {message.file.name} ({size_mb:.2f} MB)"
             )
+            files_count_label.config(
+                text=f"📦 Total Files: {len(results)}"
+            )
 
         root.after(0, insert_item)
 
-    root.after(0, lambda: set_status("Search Completed ✔", "#00ff99"))
-
+    if fetch_all:
+        root.after(0, lambda: set_status("Showing ALL files ✔", "#00ff99"))
+    else:
+        root.after(0, lambda: set_status("Search Completed ✔", "#00ff99"))
 
 # ---------- DOWNLOAD ----------
 async def download_selected(indexes, download_dir):
@@ -255,7 +269,13 @@ def start_download():
         messagebox.showerror("Error", "Select at least one file")
         return
 
-    folder = sanitize_folder_name(keyword_entry.get())
+    keyword = keyword_entry.get().strip()
+
+    if keyword.lower() == "all":
+        folder = "all_files"
+    else:
+        folder = sanitize_folder_name(keyword)
+
     download_dir = os.path.join(BASE_DOWNLOAD_DIR, folder)
     os.makedirs(download_dir, exist_ok=True)
 
@@ -264,42 +284,76 @@ def start_download():
         loop
     )
 
-
 # ---------- VIEW DOWNLOADS ----------
 def view_downloads():
     download_window = tk.Toplevel(root)
     download_window.title("Downloaded Files")
-    download_window.geometry("750x500")
+    download_window.geometry("800x520")
     download_window.configure(bg="#1e1e2f")
 
-    frame = tk.Frame(download_window, bg="#1e1e2f")
-    frame.pack(fill="both", expand=True, padx=10, pady=10)
+    style = ttk.Style()
+    style.theme_use("default")
 
-    tree = ttk.Treeview(frame)
+    # Treeview styling
+    style.configure("Treeview",
+                    background="#2b2b3c",
+                    foreground="white",
+                    fieldbackground="#2b2b3c",
+                    rowheight=28,
+                    font=("Segoe UI", 10))
+
+    style.map("Treeview",
+              background=[("selected", "#3a86ff")])
+
+    style.configure("Treeview.Heading",
+                    font=("Segoe UI", 11, "bold"),
+                    background="#1e1e2f",
+                    foreground="cyan")
+
+    container = tk.Frame(download_window, bg="#1e1e2f")
+    container.pack(fill="both", expand=True, padx=15, pady=15)
+
+    tree = ttk.Treeview(container, show="tree")
     tree.pack(side="left", fill="both", expand=True)
 
-    scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+    scrollbar = ttk.Scrollbar(container, orient="vertical", command=tree.yview)
     scrollbar.pack(side="right", fill="y")
     tree.configure(yscrollcommand=scrollbar.set)
 
     if not os.path.exists(BASE_DOWNLOAD_DIR):
         os.makedirs(BASE_DOWNLOAD_DIR)
 
-    root_node = tree.insert("", "end",
-                            text=BASE_DOWNLOAD_DIR,
-                            open=True,
-                            values=(BASE_DOWNLOAD_DIR,))
+    # Insert root folder
+    root_node = tree.insert(
+        "",
+        "end",
+        text=f"📂 {os.path.basename(BASE_DOWNLOAD_DIR)}",
+        open=True,
+        values=(BASE_DOWNLOAD_DIR,)
+    )
 
     def insert_items(parent, path):
-        for item in os.listdir(path):
+        items = sorted(os.listdir(path))
+
+        for item in items:
             full_path = os.path.join(path, item)
 
-            node = tree.insert(parent, "end",
-                               text=item,
-                               values=(full_path,))
-
             if os.path.isdir(full_path):
+                node = tree.insert(
+                    parent,
+                    "end",
+                    text=f"📁 {item}",
+                    open=False,
+                    values=(full_path,)
+                )
                 insert_items(node, full_path)
+            else:
+                tree.insert(
+                    parent,
+                    "end",
+                    text=f"📄 {item}",
+                    values=(full_path,)
+                )
 
     insert_items(root_node, BASE_DOWNLOAD_DIR)
 
@@ -317,10 +371,11 @@ def view_downloads():
             tree.item(item, open=not tree.item(item, "open"))
 
     tree.bind("<Double-1>", open_selected)
+    
+
     ttk.Button(download_window,
                text="Open Selected",
-               command=open_selected).pack(pady=8)
-
+               command=open_selected).pack(pady=10)
 
 # ---------- STATUS ----------
 def set_status(text, color):
@@ -330,7 +385,7 @@ def set_status(text, color):
 # ---------- GUI ----------
 root = tk.Tk()
 root.title("Telegram File Downloader")
-root.geometry("900x650")
+root.geometry("1080x577")
 root.configure(bg="#141421")
 
 sidebar = tk.Frame(root, bg="#1e1e2f", width=200)
@@ -353,47 +408,139 @@ tk.Label(card, text="Telegram File Downloader",
          bg="#1e1e2f", fg="white",
          font=("Segoe UI", 18, "bold")).pack(pady=15)
 
-tk.Label(card, text="Channel Username",
-         bg="#1e1e2f", fg="#bbbbff").pack()
+# ---------- SIDE BY SIDE INPUT SECTION ----------
 
-channel_entry = tk.Entry(card, width=50,
-                         bg="#2a2a40", fg="white",
-                         insertbackground="white")
-channel_entry.pack(pady=5, ipady=6)
+input_container = tk.Frame(card, bg="#1e1e2f")
+input_container.pack(fill="x", padx=40, pady=20)
 
-tk.Label(card, text="Search Keyword",
-         bg="#1e1e2f", fg="#bbbbff").pack()
+input_container.columnconfigure(0, weight=1)
+input_container.columnconfigure(1, weight=1)
 
-keyword_entry = tk.Entry(card, width=50,
-                         bg="#2a2a40", fg="white",
-                         insertbackground="white")
-keyword_entry.pack(pady=5, ipady=6)
+# Channel Box
+channel_wrapper = tk.Frame(
+    input_container,
+    bg="#2a2a40",
+    highlightthickness=1,
+    highlightbackground="#3a3a5a"
+)
+channel_wrapper.grid(row=0, column=0, padx=10, sticky="ew")
 
-ttk.Button(card, text="🔍 Search",
-           command=start_search).pack(pady=10)
+tk.Label(
+    channel_wrapper,
+    text="Channel Name",
+    bg="#2a2a40",
+    fg="#bbbbff",
+    font=("Segoe UI", 9)
+).pack(anchor="w", padx=12, pady=(8, 0))
 
-results_listbox = tk.Listbox(card,
-                             selectmode=tk.MULTIPLE,
-                             width=85, height=14,
-                             bg="#2a2a40",
-                             fg="white",
-                             selectbackground="#5757ff")
-results_listbox.pack(pady=10)
+channel_entry = tk.Entry(
+    channel_wrapper,
+    bg="#2a2a40",
+    fg="white",
+    insertbackground="white",
+    relief="flat",
+    font=("Segoe UI", 10)
+)
+channel_entry.pack(fill="x", padx=12, pady=(0, 10), ipady=6)
+
+
+# Keyword Box
+keyword_wrapper = tk.Frame(
+    input_container,
+    bg="#2a2a40",
+    highlightthickness=1,
+    highlightbackground="#3a3a5a"
+)
+keyword_wrapper.grid(row=0, column=1, padx=10, sticky="ew")
+
+tk.Label(
+    keyword_wrapper,
+    text="Search Keyword",
+    bg="#2a2a40",
+    fg="#bbbbff",
+    font=("Segoe UI", 9)
+).pack(anchor="w", padx=12, pady=(8, 0))
+
+keyword_entry = tk.Entry(
+    keyword_wrapper,
+    bg="#2a2a40",
+    fg="white",
+    insertbackground="white",
+    relief="flat",
+    font=("Segoe UI", 10)
+)
+keyword_entry.pack(fill="x", padx=12, pady=(0, 10), ipady=6)
+
+
+# Search Button
+ttk.Button(
+    card,
+    text="🔍 Search",
+    command=start_search
+).pack(pady=10)
+
+
+
+# ---------- RESULTS FRAME (Resizable + Scrollbar) ----------
+list_frame = tk.Frame(card, bg="#1e1e2f")
+list_frame.pack(fill="both", expand=True, pady=10)
+
+scrollbar = ttk.Scrollbar(list_frame)
+scrollbar.pack(side="right", fill="y")
+
+results_listbox = tk.Listbox(
+    list_frame,
+    selectmode=tk.MULTIPLE,
+    bg="#2a2a40",
+    fg="white",
+    selectbackground="#5757ff",
+    yscrollcommand=scrollbar.set
+)
+
+results_listbox.pack(side="left", fill="both", expand=True)
+scrollbar.config(command=results_listbox.yview)
 
 ttk.Button(card, text="⬇ Download Selected",
            command=start_download).pack(pady=5)
 
-progress_bar = ttk.Progressbar(card,
-                               length=500,
-                               mode="determinate")
-progress_bar.pack(pady=15)
+# ---------- COUNT + PROGRESS + STATUS (SIDE BY SIDE) ----------
 
-status_label = tk.Label(card,
-                        text="Status: Idle",
-                        bg="#1e1e2f",
-                        fg="#00e5ff",
-                        font=("Segoe UI", 10, "bold"))
-status_label.pack(pady=5)
+bottom_frame = tk.Frame(card, bg="#1e1e2f")
+bottom_frame.pack(fill="x", padx=40, pady=15)
 
+# Responsive columns
+bottom_frame.columnconfigure(0, weight=1)  # Count
+bottom_frame.columnconfigure(1, weight=3)  # Progress
+bottom_frame.columnconfigure(2, weight=1)  # Status
+
+
+# ---- Files Count Label ----
+files_count_label = tk.Label(
+    bottom_frame,
+    text="📦 Total Files: 0",
+    bg="#1e1e2f",
+    fg="#00e5ff",
+    font=("Segoe UI", 10, "bold")
+)
+files_count_label.grid(row=0, column=0, sticky="w")
+
+
+# ---- Progress Bar ----
+progress_bar = ttk.Progressbar(
+    bottom_frame,
+    mode="determinate"
+)
+progress_bar.grid(row=0, column=1, sticky="ew", padx=15, ipady=6)
+
+
+# ---- Status Label ----
+status_label = tk.Label(
+    bottom_frame,
+    text="Status: Idle",
+    bg="#1e1e2f",
+    fg="#00e5ff",
+    font=("Segoe UI", 10, "bold")
+)
+status_label.grid(row=0, column=2, sticky="e")
 
 root.mainloop()
