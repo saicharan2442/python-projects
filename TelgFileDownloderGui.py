@@ -1,3 +1,5 @@
+#pip install telethon
+
 import asyncio
 import os
 import re
@@ -544,3 +546,4 @@ status_label = tk.Label(
 status_label.grid(row=0, column=2, sticky="e")
 
 root.mainloop()
+
